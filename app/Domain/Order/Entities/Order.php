@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Domain\Models\Order;
+namespace App\Domain\Order\Entities;
 
-use App\Domain\Exceptions\OrderNotFoundException;
-use App\Domain\Models\Order\Exceptions\OrderModificationException;
+use App\Domain\Order\Exceptions\OrderModificationException;
 
 class Order
 {
