@@ -2,7 +2,7 @@
 
 namespace App\Domain\Models\Order;
 
-use App\Domain\Exceptions\OrderNotFoundException;
+use App\Application\DTOs\MoneyDTO;
 use App\Domain\Models\Order\Exceptions\OrderModificationException;
 
 class Order
@@ -45,9 +45,10 @@ class Order
         return $this->status;
     }
 
-    public function totalPrice(): float
+    public function totalPrice(): MoneyDTO
     {
-        return array_sum(array_map(fn($i) => (float)$i['price'], $this->items));
+        $total = array_sum(array_map(fn($i) => (float)$i['price'], $this->items));
+        return new MoneyDTO($total);
     }
 
     public function updateItems(array $items): void

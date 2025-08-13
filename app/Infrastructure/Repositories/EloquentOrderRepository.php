@@ -2,9 +2,10 @@
 
 namespace App\Infrastructure\Repositories;
 
+use App\Application\DTOs\MoneyDTO;
+use App\Models\Order as EloquentOrder;
 use App\Domain\Models\Order\Order as DomainOrder;
 use App\Domain\Repositories\OrderRepositoryInterface;
-use App\Models\Order as EloquentOrder;
 
 final class EloquentOrderRepository implements OrderRepositoryInterface
 {
@@ -49,5 +50,12 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         $skip = ($page - 1) * $perPage;
         $el = EloquentOrder::query()->orderBy('id', 'desc')->skip($skip)->take($perPage)->get();
         return $el->map(fn($e) => (new DomainOrder($e->items, $e->customer_name, $e->status, $e->id))->toArray())->all();
+    }
+
+    public function findByTotalPriceRange(MoneyDTO $minPrice, MoneyDTO $maxPrice): array
+    {
+        return EloquentOrder::whereBetween('total_price', [$minPrice->amount, $maxPrice->amount])
+            ->get()
+            ->toArray();
     }
 }
