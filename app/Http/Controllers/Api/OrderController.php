@@ -9,7 +9,11 @@ use App\Application\Commands\CreateOrder\CreateOrderHandler;
 use App\Application\Queries\GetOrder\GetOrderHandler;
 use App\Application\Commands\UpdateOrder\UpdateOrderHandler;
 use App\Application\Commands\DeleteOrder\DeleteOrderHandler;
+use App\Application\DTOs\MoneyDTO;
 use App\Application\Queries\ListOrders\ListOrdersHandler;
+use App\Infrastructure\Services\PaymentService;
+use App\Models\Order;
+use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
@@ -18,7 +22,8 @@ class OrderController extends Controller
         private GetOrderHandler $getHandler,
         private UpdateOrderHandler $updateHandler,
         private DeleteOrderHandler $deleteHandler,
-        private ListOrdersHandler $listHandler
+        private ListOrdersHandler $listHandler,
+        private PaymentService $paymentService
     ) {}
 
     public function store(CreateOrderRequest $req)
@@ -53,5 +58,16 @@ class OrderController extends Controller
     {
         $ok = $this->deleteHandler->handle(new \App\Application\Commands\DeleteOrder\DeleteOrderCommand($id));
         return response()->json(['deleted' => $ok]);
+    }
+
+    public function processPayment(Request $request, int $orderId)
+    {
+        $order = Order::find($orderId);
+        $amount = new MoneyDTO($request->input('amount'));
+        $paymentMethod = $request->input('payment_method');
+
+        $result = $this->paymentService->processPayment($order, $amount, $paymentMethod);
+
+        return response()->json($result);
     }
 }

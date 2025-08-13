@@ -5,12 +5,22 @@ namespace App\Application\DTOs;
 final class MoneyDTO
 {
     public function __construct(
-        public readonly float $amount,
-        public readonly string $currency = 'USD'
+        private float $amount,
+        private string $currency = 'USD'
     ) {
         if ($this->amount < 0) {
             throw new \InvalidArgumentException('Amount cannot be negative');
         }
+    }
+
+    public function getAmount(): float
+    {
+        return $this->amount;
+    }
+
+    public function getCurrency(): string
+    {
+        return $this->currency;
     }
 
     public function add(MoneyDTO $other): self
