@@ -2,7 +2,7 @@
 
 namespace App\Application\Commands\UpdateOrder;
 
-use App\Domain\Repositories\OrderRepositoryInterface;
+use App\Domain\Order\Repositories\OrderRepositoryInterface;
 
 final class UpdateOrderHandler
 {

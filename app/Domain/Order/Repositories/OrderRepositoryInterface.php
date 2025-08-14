@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domain\Repositories;
+namespace App\Domain\Order\Repositories;
 
 use App\Application\DTOs\MoneyDTO;
 use App\Domain\Order\Entities\Order;

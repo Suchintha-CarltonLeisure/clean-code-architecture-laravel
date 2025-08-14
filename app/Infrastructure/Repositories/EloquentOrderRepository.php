@@ -5,7 +5,7 @@ namespace App\Infrastructure\Repositories;
 use App\Application\DTOs\MoneyDTO;
 use App\Models\Order as EloquentOrder;
 use App\Domain\Order\Entities\Order as DomainOrder;
-use App\Domain\Repositories\OrderRepositoryInterface;
+use App\Domain\Order\Repositories\OrderRepositoryInterface;
 use App\Domain\Order\ValueObjects\OrderId;
 use App\Domain\Order\ValueObjects\CustomerName;
 use App\Domain\Order\ValueObjects\OrderStatus;

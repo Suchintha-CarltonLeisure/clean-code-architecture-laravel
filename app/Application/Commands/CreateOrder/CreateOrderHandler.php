@@ -3,7 +3,7 @@
 namespace App\Application\Commands\CreateOrder;
 
 use App\Domain\Order\Entities\Order;
-use App\Domain\Repositories\OrderRepositoryInterface;
+use App\Domain\Order\Repositories\OrderRepositoryInterface;
 
 final class CreateOrderHandler
 {
