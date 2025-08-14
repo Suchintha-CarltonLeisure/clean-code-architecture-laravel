@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Domain\Order\ValueObjects\CustomerName;
 
 class CreateOrderRequest extends FormRequest
 {
@@ -10,13 +11,26 @@ class CreateOrderRequest extends FormRequest
     {
         return true;
     }
+
     public function rules(): array
     {
         return [
-            'customer_name' => 'required|string',
+            'customer_name' => 'required|string|min:2|max:100|regex:/^[a-zA-Z\s\'-]+$/',
             'items' => 'required|array|min:1',
             'items.*.name' => 'required|string',
             'items.*.price' => 'required|numeric|min:0',
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'customer_name.regex' => 'Customer name can only contain letters, spaces, hyphens, and apostrophes.',
+        ];
+    }
+
+    public function getCustomerName(): CustomerName
+    {
+        return CustomerName::fromString($this->input('customer_name'));
     }
 }

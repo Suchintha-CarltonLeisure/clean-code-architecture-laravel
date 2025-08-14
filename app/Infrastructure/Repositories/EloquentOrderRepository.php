@@ -4,15 +4,18 @@ namespace App\Infrastructure\Repositories;
 
 use App\Application\DTOs\MoneyDTO;
 use App\Models\Order as EloquentOrder;
-use App\Domain\Models\Order\Order as DomainOrder;
+use App\Domain\Order\Entities\Order as DomainOrder;
 use App\Domain\Repositories\OrderRepositoryInterface;
+use App\Domain\Order\ValueObjects\OrderId;
+use App\Domain\Order\ValueObjects\CustomerName;
+use App\Domain\Order\ValueObjects\OrderStatus;
 
 final class EloquentOrderRepository implements OrderRepositoryInterface
 {
     public function save(DomainOrder $order): DomainOrder
     {
-        if ($order->getId()) {
-            $elo = EloquentOrder::find($order->getId());
+        if ($order->getId()->isNotNull()) {
+            $elo = EloquentOrder::find($order->getId()->getValue());
             if (!$elo) {
                 // treat as create if not found
                 $elo = new EloquentOrder();
@@ -21,26 +24,32 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
             $elo = new EloquentOrder();
         }
 
-        $elo->customer_name = $order->getCustomerName();
+        $elo->customer_name = $order->getCustomerName()->getValue();
         $elo->items = $order->getItems();
         $elo->total_price = $order->totalPrice();
-        $elo->status = $order->getStatus();
+        $elo->status = $order->getStatus()->getValue();
         $elo->save();
 
-        $order->setId($elo->id);
+        $order->setId(OrderId::fromInt($elo->id));
         return $order;
     }
 
-    public function findById(int $id): ?DomainOrder
+    public function findById(OrderId $id): ?DomainOrder
     {
-        $elo = EloquentOrder::find($id);
+        $elo = EloquentOrder::find($id->getValue());
         if (!$elo) return null;
-        return new DomainOrder($elo->items, $elo->customer_name, $elo->status, $elo->id);
+
+        return new DomainOrder(
+            $elo->items,
+            CustomerName::fromString($elo->customer_name),
+            OrderStatus::fromString($elo->status),
+            OrderId::fromInt($elo->id)
+        );
     }
 
-    public function deleteById(int $id): bool
+    public function deleteById(OrderId $id): bool
     {
-        $elo = EloquentOrder::find($id);
+        $elo = EloquentOrder::find($id->getValue());
         if (!$elo) return false;
         return (bool)$elo->delete();
     }
@@ -49,13 +58,30 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
     {
         $skip = ($page - 1) * $perPage;
         $el = EloquentOrder::query()->orderBy('id', 'desc')->skip($skip)->take($perPage)->get();
-        return $el->map(fn($e) => (new DomainOrder($e->items, $e->customer_name, $e->status, $e->id))->toArray())->all();
+        return $el->map(function ($e) {
+            $order = new DomainOrder(
+                $e->items,
+                CustomerName::fromString($e->customer_name),
+                OrderStatus::fromString($e->status),
+                OrderId::fromInt($e->id)
+            );
+            return $order->toArray();
+        })->all();
     }
 
     public function findByTotalPriceRange(MoneyDTO $minPrice, MoneyDTO $maxPrice): array
     {
-        return EloquentOrder::whereBetween('total_price', [$minPrice->amount, $maxPrice->amount])
+        return EloquentOrder::whereBetween('total_price', [$minPrice->getAmount(), $maxPrice->getAmount()])
             ->get()
-            ->toArray();
+            ->map(function ($e) {
+                $order = new DomainOrder(
+                    $e->items,
+                    CustomerName::fromString($e->customer_name),
+                    OrderStatus::fromString($e->status),
+                    OrderId::fromInt($e->id)
+                );
+                return $order->toArray();
+            })
+            ->all();
     }
 }

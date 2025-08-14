@@ -2,7 +2,7 @@
 
 namespace App\Application\Commands\CreateOrder;
 
-use App\Domain\Models\Order\Order;
+use App\Domain\Order\Entities\Order;
 use App\Domain\Repositories\OrderRepositoryInterface;
 
 final class CreateOrderHandler
@@ -12,9 +12,8 @@ final class CreateOrderHandler
     public function handle(CreateOrderCommand $command): CreateOrderResponse
     {
         $order = new Order($command->items, $command->customerName);
-        $order->setId(null); // ensure
         $saved = $this->orders->save($order);
 
-        return new CreateOrderResponse($saved->getId(), $saved->totalPrice());
+        return new CreateOrderResponse($saved->getId()->getValue(), $saved->totalPrice());
     }
 }

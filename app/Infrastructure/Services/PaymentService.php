@@ -3,7 +3,7 @@
 namespace App\Infrastructure\Services;
 
 use App\Application\DTOs\MoneyDTO;
-use App\Domain\Models\Order\Order;
+use App\Domain\Order\Entities\Order;
 use Illuminate\Support\Facades\Log;
 
 final class PaymentService
