@@ -11,6 +11,8 @@ use App\Application\Commands\UpdateOrder\UpdateOrderHandler;
 use App\Application\Commands\DeleteOrder\DeleteOrderHandler;
 use App\Application\DTOs\MoneyDTO;
 use App\Application\Queries\ListOrders\ListOrdersHandler;
+use App\Application\Queries\GetOrderPricing\GetOrderPricingHandler;
+use App\Application\Queries\GetOrderPricing\GetOrderPricingQuery;
 use App\Infrastructure\Services\PaymentService;
 use App\Models\Order;
 use App\Domain\Order\ValueObjects\OrderId;
@@ -24,7 +26,8 @@ class OrderController extends Controller
         private UpdateOrderHandler $updateHandler,
         private DeleteOrderHandler $deleteHandler,
         private ListOrdersHandler $listHandler,
-        private PaymentService $paymentService
+        private GetOrderPricingHandler $pricingHandler,
+        private ?PaymentService $paymentService = null
     ) {}
 
     public function store(CreateOrderRequest $req)
@@ -66,6 +69,10 @@ class OrderController extends Controller
 
     public function processPayment(Request $request, int $orderId)
     {
+        if (!$this->paymentService) {
+            return response()->json(['error' => 'Payment service not available'], 503);
+        }
+
         $order = Order::find($orderId);
         $amount = new MoneyDTO($request->input('amount'));
         $paymentMethod = $request->input('payment_method');
@@ -73,5 +80,26 @@ class OrderController extends Controller
         $result = $this->paymentService->processPayment($order, $amount, $paymentMethod);
 
         return response()->json($result);
+    }
+
+    /**
+     * Get order pricing with discounts using Domain Service
+     */
+    public function getPricing(int $id)
+    {
+        try {
+            $orderId = OrderId::fromInt($id);
+            $query = new GetOrderPricingQuery($orderId);
+            
+            $response = $this->pricingHandler->handle($query);
+            
+            if (!$response) {
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+
+            return response()->json($response->toArray());
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
     }
 }

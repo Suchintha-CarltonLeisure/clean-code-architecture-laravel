@@ -31,6 +31,18 @@ final class MoneyDTO
         return new self($this->amount + $other->amount, $this->currency);
     }
 
+    public function subtract(MoneyDTO $other): self
+    {
+        if ($this->currency !== $other->currency) {
+            throw new \InvalidArgumentException('Cannot subtract money with different currencies');
+        }
+        $result = $this->amount - $other->amount;
+        if ($result < 0) {
+            throw new \InvalidArgumentException('Result cannot be negative');
+        }
+        return new self($result, $this->currency);
+    }
+
     public function multiply(float $factor): self
     {
         if ($factor < 0) {

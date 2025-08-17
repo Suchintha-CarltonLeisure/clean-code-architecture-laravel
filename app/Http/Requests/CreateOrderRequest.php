@@ -17,8 +17,11 @@ class CreateOrderRequest extends FormRequest
         return [
             'customer_name' => 'required|string|min:2|max:100|regex:/^[a-zA-Z\s\'-]+$/',
             'items' => 'required|array|min:1',
-            'items.*.name' => 'required|string',
-            'items.*.price' => 'required|numeric|min:0',
+            'items.*.product_name' => 'required|string|min:1|max:255',
+            'items.*.product_sku' => 'required|string|min:1|max:100',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.description' => 'nullable|string|max:500',
         ];
     }
 

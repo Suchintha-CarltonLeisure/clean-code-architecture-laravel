@@ -25,8 +25,8 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         }
 
         $elo->customer_name = $order->getCustomerName()->getValue();
-        $elo->items = $order->getItems();
-        $elo->total_price = $order->totalPrice();
+        $elo->items = array_map(fn($item) => $item->toArray(), $order->getItems());
+        $elo->total_price = $order->totalPrice()->getAmount();
         $elo->status = $order->getStatus()->getValue();
         $elo->save();
 
@@ -39,8 +39,21 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         $elo = EloquentOrder::find($id->getValue());
         if (!$elo) return null;
 
+        // Convert stored items back to OrderItem entities
+        $orderItems = [];
+        foreach ($elo->items as $itemData) {
+            $orderItems[] = new \App\Domain\Order\Entities\OrderItem(
+                $itemData['product_name'],
+                $itemData['product_sku'],
+                $itemData['quantity'],
+                new MoneyDTO($itemData['unit_price']['amount'], $itemData['unit_price']['currency']),
+                $itemData['description'] ?? null,
+                \App\Domain\Order\ValueObjects\OrderItemId::fromString($itemData['id'])
+            );
+        }
+
         return new DomainOrder(
-            $elo->items,
+            $orderItems,
             CustomerName::fromString($elo->customer_name),
             OrderStatus::fromString($elo->status),
             OrderId::fromInt($elo->id)
@@ -59,8 +72,21 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         $skip = ($page - 1) * $perPage;
         $el = EloquentOrder::query()->orderBy('id', 'desc')->skip($skip)->take($perPage)->get();
         return $el->map(function ($e) {
+            // Convert stored items back to OrderItem entities
+            $orderItems = [];
+            foreach ($e->items as $itemData) {
+                $orderItems[] = new \App\Domain\Order\Entities\OrderItem(
+                    $itemData['product_name'],
+                    $itemData['product_sku'],
+                    $itemData['quantity'],
+                    new MoneyDTO($itemData['unit_price']['amount'], $itemData['unit_price']['currency']),
+                    $itemData['description'] ?? null,
+                    \App\Domain\Order\ValueObjects\OrderItemId::fromString($itemData['id'])
+                );
+            }
+
             $order = new DomainOrder(
-                $e->items,
+                $orderItems,
                 CustomerName::fromString($e->customer_name),
                 OrderStatus::fromString($e->status),
                 OrderId::fromInt($e->id)
@@ -74,8 +100,21 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         return EloquentOrder::whereBetween('total_price', [$minPrice->getAmount(), $maxPrice->getAmount()])
             ->get()
             ->map(function ($e) {
+                // Convert stored items back to OrderItem entities
+                $orderItems = [];
+                foreach ($e->items as $itemData) {
+                    $orderItems[] = new \App\Domain\Order\Entities\OrderItem(
+                        $itemData['product_name'],
+                        $itemData['product_sku'],
+                        $itemData['quantity'],
+                        new MoneyDTO($itemData['unit_price']['amount'], $itemData['unit_price']['currency']),
+                        $itemData['description'] ?? null,
+                        \App\Domain\Order\ValueObjects\OrderItemId::fromString($itemData['id'])
+                    );
+                }
+
                 $order = new DomainOrder(
-                    $e->items,
+                    $orderItems,
                     CustomerName::fromString($e->customer_name),
                     OrderStatus::fromString($e->status),
                     OrderId::fromInt($e->id)
