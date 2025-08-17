@@ -9,9 +9,14 @@ use App\Domain\Order\Repositories\OrderRepositoryInterface;
 use App\Domain\Order\ValueObjects\OrderId;
 use App\Domain\Order\ValueObjects\CustomerName;
 use App\Domain\Order\ValueObjects\OrderStatus;
+use App\Domain\Shared\Events\EventDispatcher;
 
 final class EloquentOrderRepository implements OrderRepositoryInterface
 {
+    public function __construct(
+        private EventDispatcher $eventDispatcher
+    ) {}
+
     public function save(DomainOrder $order): DomainOrder
     {
         if ($order->getId()->isNotNull()) {
@@ -31,6 +36,13 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         $elo->save();
 
         $order->setId(OrderId::fromInt($elo->id));
+        
+        // Dispatch domain events after successful persistence
+        foreach ($order->getUncommittedEvents() as $event) {
+            $this->eventDispatcher->dispatch($event);
+        }
+        $order->markEventsAsCommitted();
+        
         return $order;
     }
 

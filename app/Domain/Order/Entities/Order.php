@@ -9,8 +9,12 @@ use App\Domain\Order\ValueObjects\OrderId;
 use App\Domain\Order\ValueObjects\OrderItemId;
 use App\Domain\Order\ValueObjects\CustomerName;
 use App\Domain\Order\ValueObjects\OrderStatus;
+use App\Domain\Shared\Events\AggregateRoot;
+use App\Domain\Order\Events\OrderCreated;
+use App\Domain\Order\Events\OrderStatusChanged;
+use DateTimeImmutable;
 
-class Order
+class Order extends AggregateRoot
 {
     private OrderId $id;
     private CustomerName $customerName;
@@ -39,6 +43,17 @@ class Order
         $this->customerName = $customerName;
         $this->status = $status ?? OrderStatus::pending();
         $this->id = $id ?? OrderId::generate();
+
+        // Record domain event for new orders
+        if ($id === null) {
+            $this->recordEvent(new OrderCreated(
+                $this->id,
+                $this->customerName,
+                $this->totalPrice(),
+                count($this->items),
+                new DateTimeImmutable()
+            ));
+        }
     }
 
     public function getId(): OrderId
@@ -76,7 +91,17 @@ class Order
                 "Cannot transition from status '{$this->status->getValue()}' to '{$newStatus->getValue()}'"
             );
         }
+        
+        $previousStatus = $this->status;
         $this->status = $newStatus;
+
+        // Record domain event for status changes
+        $this->recordEvent(new OrderStatusChanged(
+            $this->id,
+            $previousStatus,
+            $newStatus,
+            new DateTimeImmutable()
+        ));
     }
 
     public function totalPrice(): MoneyDTO
