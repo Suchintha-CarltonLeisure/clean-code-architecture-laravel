@@ -1,15 +1,16 @@
 <?php
 
-namespace App\Domain\Repositories;
+namespace App\Domain\Order\Repositories;
 
 use App\Application\DTOs\MoneyDTO;
-use App\Domain\Models\Order\Order;
+use App\Domain\Order\Entities\Order;
+use App\Domain\Order\ValueObjects\OrderId;
 
 interface OrderRepositoryInterface
 {
     public function save(Order $order): Order;
-    public function findById(int $id): ?Order;
-    public function deleteById(int $id): bool;
+    public function findById(OrderId $id): ?Order;
+    public function deleteById(OrderId $id): bool;
     /** Simple list - adjust to return paginator if you want */
     public function list(int $perPage = 15, int $page = 1): array;
 

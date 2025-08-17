@@ -12,3 +12,6 @@ Route::post('orders', [OrderController::class, 'store']);
 Route::get('orders/{id}', [OrderController::class, 'show']);
 Route::put('orders/{id}', [OrderController::class, 'update']);
 Route::delete('orders/{id}', [OrderController::class, 'destroy']);
+
+// Domain Service endpoint
+Route::get('orders/{id}/pricing', [OrderController::class, 'getPricing']);

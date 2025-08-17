@@ -11,8 +11,11 @@ use App\Application\Commands\UpdateOrder\UpdateOrderHandler;
 use App\Application\Commands\DeleteOrder\DeleteOrderHandler;
 use App\Application\DTOs\MoneyDTO;
 use App\Application\Queries\ListOrders\ListOrdersHandler;
+use App\Application\Queries\GetOrderPricing\GetOrderPricingHandler;
+use App\Application\Queries\GetOrderPricing\GetOrderPricingQuery;
 use App\Infrastructure\Services\PaymentService;
 use App\Models\Order;
+use App\Domain\Order\ValueObjects\OrderId;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -23,19 +26,21 @@ class OrderController extends Controller
         private UpdateOrderHandler $updateHandler,
         private DeleteOrderHandler $deleteHandler,
         private ListOrdersHandler $listHandler,
-        private PaymentService $paymentService
+        private GetOrderPricingHandler $pricingHandler,
+        private ?PaymentService $paymentService = null
     ) {}
 
     public function store(CreateOrderRequest $req)
     {
-        $cmd = new CreateOrderCommand($req->input('items'), $req->input('customer_name'));
+        $cmd = new CreateOrderCommand($req->input('items'), $req->getCustomerName());
         $res = $this->createHandler->handle($cmd);
         return response()->json($res->toArray(), 201);
     }
 
     public function show(int $id)
     {
-        $res = $this->getHandler->handle(new \App\Application\Queries\GetOrder\GetOrderQuery($id));
+        $orderId = OrderId::fromInt($id);
+        $res = $this->getHandler->handle(new \App\Application\Queries\GetOrder\GetOrderQuery($orderId));
         if (!$res) return response()->json(['message' => 'Not found'], 404);
         return response()->json($res->toArray());
     }
@@ -48,7 +53,8 @@ class OrderController extends Controller
 
     public function update(\App\Http\Requests\UpdateOrderRequest $req, int $id)
     {
-        $cmd = new \App\Application\Commands\UpdateOrder\UpdateOrderCommand($id, $req->input('items'));
+        $orderId = OrderId::fromInt($id);
+        $cmd = new \App\Application\Commands\UpdateOrder\UpdateOrderCommand($orderId, $req->input('items'));
         $updated = $this->updateHandler->handle($cmd);
         if (!$updated) return response()->json(['message' => 'Not found'], 404);
         return response()->json($updated);
@@ -56,12 +62,17 @@ class OrderController extends Controller
 
     public function destroy(int $id)
     {
-        $ok = $this->deleteHandler->handle(new \App\Application\Commands\DeleteOrder\DeleteOrderCommand($id));
+        $orderId = OrderId::fromInt($id);
+        $ok = $this->deleteHandler->handle(new \App\Application\Commands\DeleteOrder\DeleteOrderCommand($orderId));
         return response()->json(['deleted' => $ok]);
     }
 
     public function processPayment(Request $request, int $orderId)
     {
+        if (!$this->paymentService) {
+            return response()->json(['error' => 'Payment service not available'], 503);
+        }
+
         $order = Order::find($orderId);
         $amount = new MoneyDTO($request->input('amount'));
         $paymentMethod = $request->input('payment_method');
@@ -69,5 +80,26 @@ class OrderController extends Controller
         $result = $this->paymentService->processPayment($order, $amount, $paymentMethod);
 
         return response()->json($result);
+    }
+
+    /**
+     * Get order pricing with discounts using Domain Service
+     */
+    public function getPricing(int $id)
+    {
+        try {
+            $orderId = OrderId::fromInt($id);
+            $query = new GetOrderPricingQuery($orderId);
+            
+            $response = $this->pricingHandler->handle($query);
+            
+            if (!$response) {
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+
+            return response()->json($response->toArray());
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
     }
 }
