@@ -13,6 +13,8 @@ use App\Application\DTOs\MoneyDTO;
 use App\Application\Queries\ListOrders\ListOrdersHandler;
 use App\Application\Queries\GetOrderPricing\GetOrderPricingHandler;
 use App\Application\Queries\GetOrderPricing\GetOrderPricingQuery;
+use App\Infrastructure\Presenters\Api\OrderPresenter;
+use App\Infrastructure\Presenters\Api\ResponsePresenter;
 use App\Infrastructure\Services\PaymentService;
 use App\Models\Order;
 use App\Domain\Order\ValueObjects\OrderId;
@@ -27,22 +29,51 @@ class OrderController extends Controller
         private DeleteOrderHandler $deleteHandler,
         private ListOrdersHandler $listHandler,
         private GetOrderPricingHandler $pricingHandler,
+        private OrderPresenter $orderPresenter,
+        private ResponsePresenter $responsePresenter,
         private ?PaymentService $paymentService = null
     ) {}
 
     public function store(CreateOrderRequest $req)
     {
-        $cmd = new CreateOrderCommand($req->input('items'), $req->getCustomerName());
-        $res = $this->createHandler->handle($cmd);
-        return response()->json($res->toArray(), 201);
+        try {
+            $cmd = new CreateOrderCommand($req->input('items'), $req->getCustomerName());
+            $res = $this->createHandler->handle($cmd);
+            
+            // Get the created order for presentation
+            $order = $this->getHandler->handle(
+                new \App\Application\Queries\GetOrder\GetOrderQuery(OrderId::fromInt($res->orderId))
+            );
+            
+            $presentedData = $this->orderPresenter->present($order);
+            $response = $this->responsePresenter->presentCreated($presentedData, 'Order created successfully');
+            
+            return response()->json($response, 201);
+        } catch (\Exception $e) {
+            $errorResponse = $this->responsePresenter->presentError('Failed to create order: ' . $e->getMessage());
+            return response()->json($errorResponse, 500);
+        }
     }
 
     public function show(int $id)
     {
-        $orderId = OrderId::fromInt($id);
-        $res = $this->getHandler->handle(new \App\Application\Queries\GetOrder\GetOrderQuery($orderId));
-        if (!$res) return response()->json(['message' => 'Not found'], 404);
-        return response()->json($res->toArray());
+        try {
+            $orderId = OrderId::fromInt($id);
+            $order = $this->getHandler->handle(new \App\Application\Queries\GetOrder\GetOrderQuery($orderId));
+            
+            if (!$order) {
+                $errorResponse = $this->responsePresenter->presentNotFound('Order not found');
+                return response()->json($errorResponse, 404);
+            }
+            
+            $presentedData = $this->orderPresenter->present($order);
+            $response = $this->responsePresenter->presentSuccess($presentedData, 'Order retrieved successfully');
+            
+            return response()->json($response);
+        } catch (\Exception $e) {
+            $errorResponse = $this->responsePresenter->presentError('Failed to retrieve order: ' . $e->getMessage());
+            return response()->json($errorResponse, 500);
+        }
     }
 
     public function index()
@@ -91,15 +122,22 @@ class OrderController extends Controller
             $orderId = OrderId::fromInt($id);
             $query = new GetOrderPricingQuery($orderId);
             
-            $response = $this->pricingHandler->handle($query);
+            $pricingResponse = $this->pricingHandler->handle($query);
             
-            if (!$response) {
-                return response()->json(['error' => 'Order not found'], 404);
+            if (!$pricingResponse) {
+                $errorResponse = $this->responsePresenter->presentNotFound('Order not found');
+                return response()->json($errorResponse, 404);
             }
 
-            return response()->json($response->toArray());
+            $response = $this->responsePresenter->presentSuccess(
+                $pricingResponse->toArray(), 
+                'Order pricing calculated successfully'
+            );
+            
+            return response()->json($response);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            $errorResponse = $this->responsePresenter->presentError('Failed to calculate pricing: ' . $e->getMessage());
+            return response()->json($errorResponse, 500);
         }
     }
 }

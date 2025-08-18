@@ -8,6 +8,8 @@ use App\Infrastructure\Repositories\EloquentOrderRepository;
 use App\Infrastructure\Services\PaymentService;
 use App\Domain\Order\Services\OrderPricingService;
 use App\Application\Queries\GetOrderPricing\GetOrderPricingHandler;
+use App\Infrastructure\Presenters\Api\OrderPresenter;
+use App\Infrastructure\Presenters\Api\ResponsePresenter;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +26,10 @@ class AppServiceProvider extends ServiceProvider
         
         // Register Application Handlers
         $this->app->bind(GetOrderPricingHandler::class);
+        
+        // Register Infrastructure Presenters
+        $this->app->bind(OrderPresenter::class);
+        $this->app->bind(ResponsePresenter::class);
 
         // Bind PaymentService with configuration values
         $this->app->bind(PaymentService::class, function ($app) {
