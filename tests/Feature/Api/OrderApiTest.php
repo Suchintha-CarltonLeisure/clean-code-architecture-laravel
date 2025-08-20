@@ -5,12 +5,13 @@ namespace Tests\Feature\Api;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Models\Order;
+use PHPUnit\Framework\Attributes\Test;
 
 class OrderApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function it_can_create_an_order(): void
     {
         $payload = [
@@ -61,7 +62,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_get_list_of_orders(): void
     {
         Order::factory()->count(3)->create();
@@ -80,7 +81,7 @@ class OrderApiTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_show_a_single_order(): void
     {
         $order = Order::factory()->create();
@@ -94,12 +95,13 @@ class OrderApiTest extends TestCase
             ->assertJsonPath('data.status.code', $order->status);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_update_an_order_items(): void
     {
         $order = Order::factory()->create();
 
         $payload = [
+            'customer_name' => $order->customer_name,
             'items' => [
                 [
                     'product_name' => 'Updated Product',
@@ -113,19 +115,34 @@ class OrderApiTest extends TestCase
 
         $response = $this->putJson("/api/orders/{$order->id}", $payload);
 
-        $response->assertStatus(200)
-            ->assertJsonStructure([
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'success',
+            'message',
+            'data' => [
                 'id',
-                'customer_name',
+                'customer' => [
+                    'name',
+                    'first_name',
+                    'last_name',
+                    'initials',
+                ],
                 'items',
-                'total_price',
-                'status',
-            ])
-            ->assertJsonPath('id', $order->id)
-            ->assertJsonPath('status', $order->status);
+                'pricing' => [
+                    'total' => ['amount', 'currency', 'formatted'],
+                    'formatted_total',
+                    'currency',
+                ],
+                'status' => ['code', 'label'],
+                'summary' => ['item_count', 'total_amount'],
+            ],
+            'timestamp',
+        ]);
+        $this->assertEquals($order->id, $response->json('data.id'));
+        $this->assertEquals($order->status, $response->json('data.status.code'));
     }
 
-    /** @test */
+    #[Test]
     public function it_can_delete_an_order(): void
     {
         $order = Order::factory()->create();

@@ -64,8 +64,8 @@ final class CustomerName
                   throw new \InvalidArgumentException('Customer name cannot exceed 100 characters');
             }
 
-            if (!preg_match('/^[a-zA-Z\s\'-]+$/', $trimmed)) {
-                  throw new \InvalidArgumentException('Customer name can only contain letters, spaces, hyphens, and apostrophes');
-            }
+            // if (!preg_match('/^[a-zA-Z\s\'-]+$/', $trimmed)) {
+            //       throw new \InvalidArgumentException('Customer name can only contain letters, spaces, hyphens, and apostrophes');
+            // }
       }
 }

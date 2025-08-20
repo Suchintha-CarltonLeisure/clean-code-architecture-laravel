@@ -79,6 +79,11 @@ class Order
         $this->status = $newStatus;
     }
 
+    public function updateCustomerName(CustomerName $newCustomerName): void
+    {
+        $this->customerName = $newCustomerName;
+    }
+
     public function totalPrice(): MoneyDTO
     {
         $total = new MoneyDTO(0);
