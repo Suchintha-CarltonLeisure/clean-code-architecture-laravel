@@ -15,8 +15,12 @@ class UpdateOrderRequest extends FormRequest
         return [
             'customer_name' => 'required|string',
             'items' => 'required|array|min:1',
-            'items.*.name' => 'required|string',
-            'items.*.price' => 'required|numeric|min:0',
+            'items.*.id' => 'sometimes|string|uuid',
+            'items.*.product_name' => 'required|string',
+            'items.*.product_sku' => 'required|string',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.description' => 'nullable|string',
         ];
     }
 }
